@@ -1345,4 +1345,6 @@ pub mod wmf {
     impl Drop for MediaFoundationDevice {
         fn drop(&mut self) {}
     }
+
+    unsafe impl Send for MediaFoundationDevice {}
 }

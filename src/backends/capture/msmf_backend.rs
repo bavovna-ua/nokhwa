@@ -107,6 +107,7 @@ impl MediaFoundationCaptureDevice {
         supported_camera_controls
     }
 }
+unsafe impl Send for MediaFoundationCaptureDevice {}
 
 impl CaptureBackendTrait for MediaFoundationCaptureDevice {
     fn backend(&self) -> ApiBackend {

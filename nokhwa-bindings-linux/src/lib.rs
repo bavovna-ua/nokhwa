@@ -41,7 +41,7 @@ mod internal {
         control::{Control, Flags, Type, Value},
         frameinterval::FrameIntervalEnum,
         framesize::FrameSizeEnum,
-        io::traits::CaptureStream,
+        io::traits::{CaptureStream, Stream},
         prelude::MmapStream,
         video::{capture::Parameters, Capture},
         Device, Format, FourCC,
@@ -190,12 +190,10 @@ mod internal {
         // Last check to be sure that every devices have a unique index
         // and that the data isn't corrupted
         if devices.len() > 1 {
+            let indices: std::collections::HashSet<_> = devices.iter().map(|d| d.index).collect();
             assert_eq!(
-                devices
-                    .windows(2)
-                    .filter(|window| window[0].index == window[1].index)
-                    .count(),
-                0,
+                indices.len(),
+                devices.len(),
                 "Device list should not contain duplicate indexes"
             );
         }
@@ -892,7 +890,7 @@ mod internal {
             ))
         }
 
-        fn frame_raw(&mut self) -> Result<Cow<[u8]>, NokhwaError> {
+        fn frame_raw(&mut self) -> Result<Cow<'_, [u8]>, NokhwaError> {
             match &mut self.stream_handle {
                 Some(sh) => match sh.next() {
                     Ok((data, _)) => Ok(Cow::Borrowed(data)),
@@ -1102,7 +1100,7 @@ mod internal {
             todo!()
         }
 
-        fn frame_raw(&mut self) -> Result<Cow<[u8]>, NokhwaError> {
+        fn frame_raw(&mut self) -> Result<Cow<'_, [u8]>, NokhwaError> {
             todo!()
         }
 

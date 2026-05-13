@@ -41,6 +41,20 @@ pub trait CaptureBackendTrait: Send {
     /// Returns the current backend used.
     fn backend(&self) -> ApiBackend;
 
+    fn current_format(&self) -> Result<CameraFormat, NokhwaError> {
+        todo!()
+    }
+
+    /// Sets the current format and returns old format
+    fn set_current_format(&self, _format: CameraFormat) -> Result<CameraFormat, NokhwaError> {
+        todo!()
+    }
+
+    fn formats(&self) -> Result<Vec<CameraFormat>, NokhwaError> {
+        // TODO: Implement for all APIs then remove default body
+        Ok(Vec::new())
+    }
+
     /// Gets the camera information such as Name and Index as a [`CameraInfo`].
     fn camera_info(&self) -> &CameraInfo;
 

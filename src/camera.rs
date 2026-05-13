@@ -92,6 +92,21 @@ impl Camera {
         Self { idx, api, device }
     }
 
+    pub fn current_format(&self) -> Result<CameraFormat, NokhwaError> {
+        self.device.current_format()
+    }
+
+    pub fn set_current_format(
+        &mut self,
+        format: CameraFormat,
+    ) -> Result<CameraFormat, NokhwaError> {
+        self.device.set_current_format(format)
+    }
+
+    pub fn formats(&self) -> Result<Vec<CameraFormat>, NokhwaError> {
+        self.device.formats()
+    }
+
     /// Gets the current Camera's index.
     #[must_use]
     pub fn index(&self) -> &CameraIndex {

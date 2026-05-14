@@ -1018,12 +1018,7 @@ mod internal {
         fn frame_raw(&mut self) -> Result<Cow<'_, [u8]>, NokhwaError> {
             match &mut self.stream_handle {
                 Some(sh) => match sh.next() {
-                    Ok((data, metadata)) => {
-                        // V4L2 hands back a fixed-size mmap buffer; the real payload
-                        // length is metadata.bytesused (relevant for MJPEG/H264).
-                        let used = (metadata.bytesused as usize).min(data.len());
-                        Ok(Cow::Borrowed(&data[..used]))
-                    }
+                    Ok((data, _)) => Ok(Cow::Borrowed(data)),
                     Err(why) => Err(NokhwaError::ReadFrameError(why.to_string())),
                 },
                 None => Err(NokhwaError::ReadFrameError(

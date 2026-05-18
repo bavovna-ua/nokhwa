@@ -42,12 +42,12 @@ pub trait CaptureBackendTrait: Send {
     fn backend(&self) -> ApiBackend;
 
     fn current_format(&self) -> Result<CameraFormat, NokhwaError> {
-        todo!()
+        Err(NokhwaError::UnsupportedOperationError(self.backend()))
     }
 
     /// Sets the current format and returns old format
     fn set_current_format(&self, _format: CameraFormat) -> Result<CameraFormat, NokhwaError> {
-        todo!()
+        Err(NokhwaError::UnsupportedOperationError(self.backend()))
     }
 
     fn formats(&self) -> Result<Vec<CameraFormat>, NokhwaError> {

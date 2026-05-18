@@ -372,6 +372,7 @@ pub const fn color_frame_formats() -> &'static [FrameFormat] {
         FrameFormat::NV12,
         FrameFormat::RAWRGB,
         FrameFormat::RAWBGR,
+        FrameFormat::H264,
     ]
 }
 

@@ -500,6 +500,131 @@ mod internal {
     }
 
     impl<'a> CaptureBackendTrait for V4LCaptureDevice<'a> {
+        fn current_format(&self) -> Result<CameraFormat, NokhwaError> {
+            let device = self.device.lock().unwrap();
+            get_device_format(&device)
+        }
+
+        fn set_current_format(&self, format: CameraFormat) -> Result<CameraFormat, NokhwaError> {
+            let device = self.device.lock().unwrap();
+
+            let current_format = self.current_format()?;
+
+            if current_format.width() != format.width()
+                || current_format.height() != format.height()
+                || current_format.format() != format.format()
+            {
+                if let Err(why) = device.set_format(&Format::new(
+                    format.width(),
+                    format.height(),
+                    frameformat_to_fourcc(format.format()),
+                )) {
+                    return Err(NokhwaError::SetPropertyError {
+                        property: "Resolution, FrameFormat".to_string(),
+                        value: format.to_string(),
+                        error: why.to_string(),
+                    });
+                }
+            }
+
+            if current_format.frame_rate() != format.frame_rate() {
+                if let Err(why) = device.set_params(&Parameters::with_fps(format.frame_rate())) {
+                    return Err(NokhwaError::SetPropertyError {
+                        property: "Frame rate".to_string(),
+                        value: format.frame_rate().to_string(),
+                        error: why.to_string(),
+                    });
+                }
+            }
+
+            Ok(current_format)
+        }
+
+        fn formats(&self) -> Result<Vec<CameraFormat>, NokhwaError> {
+            let device = self.device.lock().unwrap();
+            let frame_formats = match device.enum_formats() {
+                Ok(formats) => {
+                    let mut frame_format_vec = vec![];
+                    formats
+                        .iter()
+                        .for_each(|fmt| frame_format_vec.push(fmt.fourcc));
+                    frame_format_vec.dedup();
+                    Ok(frame_format_vec)
+                }
+                Err(why) => Err(NokhwaError::GetPropertyError {
+                    property: "FrameFormat".to_string(),
+                    error: why.to_string(),
+                }),
+            }?;
+
+            let mut camera_formats = vec![];
+            for ff in frame_formats {
+                let framefmt = match fourcc_to_frameformat(ff) {
+                    Some(s) => s,
+                    None => continue,
+                };
+                // i write unmaintainable blobs of code because i am so cute uwu~~
+                let mut formats = device
+                    .enum_framesizes(ff)
+                    .map_err(|why| NokhwaError::GetPropertyError {
+                        property: "ResolutionList".to_string(),
+                        error: why.to_string(),
+                    })?
+                    .into_iter()
+                    .flat_map(|x| {
+                        match x.size {
+                            FrameSizeEnum::Discrete(d) => {
+                                [Resolution::new(d.width, d.height)].to_vec()
+                            }
+                            // we step over each step, getting a new resolution.
+                            FrameSizeEnum::Stepwise(s) => (s.min_width..s.max_width)
+                                .step_by(s.step_width as usize)
+                                .zip((s.min_height..s.max_height).step_by(s.step_height as usize))
+                                .map(|(x, y)| Resolution::new(x, y))
+                                .collect(),
+                        }
+                    })
+                    .flat_map(|res| {
+                        device
+                            .enum_frameintervals(ff, res.x(), res.y())
+                            .unwrap_or_default()
+                            .into_iter()
+                            .flat_map(|x| match x.interval {
+                                FrameIntervalEnum::Discrete(dis) => {
+                                    if dis.numerator == 1 {
+                                        vec![CameraFormat::new(
+                                            Resolution::new(x.width, x.height),
+                                            framefmt,
+                                            dis.denominator,
+                                        )]
+                                    } else {
+                                        vec![]
+                                    }
+                                }
+                                FrameIntervalEnum::Stepwise(step) => {
+                                    let mut intvec = vec![];
+                                    for fstep in (step.min.numerator..=step.max.numerator)
+                                        .step_by(step.step.numerator as usize)
+                                    {
+                                        if step.max.denominator != 1 || step.min.denominator != 1 {
+                                            intvec.push(CameraFormat::new(
+                                                Resolution::new(x.width, x.height),
+                                                framefmt,
+                                                fstep,
+                                            ));
+                                        }
+                                    }
+                                    intvec
+                                }
+                            })
+                    })
+                    .collect::<Vec<CameraFormat>>();
+                camera_formats.append(&mut formats);
+            }
+
+            Ok(camera_formats)
+        }
+
         fn backend(&self) -> ApiBackend {
             ApiBackend::Video4Linux
         }
